@@ -5,6 +5,7 @@ Requires the pySecurityCenter project at https://github.com/SteveMcGrath/pySecur
 
 # How To Install
 To install pySecurityCenter, you can use either pip or easy_install to install from the cheeseshop:
+
   pip install pysecuritycenter
 
   easy_install pysecuritycenter
