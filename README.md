@@ -19,7 +19,11 @@ The script will prompt for inputs if it needs information.  Everything can be su
 For example:
 
 SCHOST=192.168.1.1; export SCHOST
+
 SCUSERNAME=jamessmith;export SCUSERNAME
+
 SCSCAN="Host discovery with OS ID"; export SCSCAN
+
 SCPASSWORD=************ ; export SCPASSWORD
+
 ./triggerscan.py
