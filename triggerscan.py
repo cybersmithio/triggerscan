@@ -5,6 +5,9 @@
 # or read from environment variables.  It will not read passwords
 # from the command line.
 #
+# Version 1.1a
+#		Add functionality to determine if scan has completed.
+#
 # Version 1.1 - 2019-03-14
 #        Updated to use pytenable library, use argparse, and support launching scans in Tenable.io
 #
@@ -78,6 +81,43 @@ def LaunchScan(DEBUG,conn,scanname,scanid):
 
 	return(False)
 
+#Return codes:
+# 2 = other
+# 1 = running
+# 0 = completed
+# -1 = error
+#Does not currently work for Tenable.sc
+def CheckScanStatus(DEBUG,conn,scanname,scanid):
+	if DEBUG:
+		if scanid == "":
+			print("Checking scan status for ", scanname)
+		else:
+			print("Checking scan status for",scanid)
+
+	#Determine if we connected to Tenable.io or Tenable.sc
+	TIO = False
+	if str(type(conn)) == "<class 'tenable.io.TenableIO'>":
+		TIO = True
+
+	if TIO:
+		if scanid == "":
+			for scan in conn.scans.list():
+				if scan['name'] == scanname:
+					print("Found scan ID",scan['id'],"for scan name",scan['name'])
+					scanid=int(scan['id'])
+		result=conn.scans.status(scanid)
+		if DEBUG:
+			print("Scan status:",result)
+		if result == "completed":
+			return(0)
+		elif result == "running" or result == "stopping":
+			return(1)
+		elif result == "scheduled":
+			return(2)
+
+	return(-1)
+
+
 #Attempts to make a connection to Tenable.sc
 def ConnectSC(DEBUG,username,password,host,port):
 	#Create the connection to Tenable.sc
@@ -115,6 +155,7 @@ def ConnectIO(DEBUG,accesskey,secretkey,host,port):
 ################################################################
 #Set debugging on or off
 DEBUG=False
+ISRUN=False
 parser = argparse.ArgumentParser(description="Launches a scan in Tenable.sc or Tenable.io.")
 parser.add_argument('--accesskey',help="The Tenable.io access key",nargs=1,action="store")
 parser.add_argument('--secretkey',help="The Tenable.io secret key",nargs=1,action="store")
@@ -125,12 +166,16 @@ parser.add_argument('--port',help="The Tenable port. (Default is 443)",nargs=1,a
 parser.add_argument('--scanname',help="The name of the scan to launch.",nargs=1,action="store")
 parser.add_argument('--scanid',help="The scan ID of the scan to launch.",nargs=1,action="store")
 parser.add_argument('--debug',help="Turn on debugging",action="store_true")
+parser.add_argument('--isrunning',help="Determine if the scan is running or not. (Does not trigger the scan)",action="store_true")
 args=parser.parse_args()
-
 
 if args.debug:
 	DEBUG=True
 	print("Debugging is enabled.")
+
+if args.isrunning:
+	ISRUN=True
+	print("Checking if scan is running")
 
 
 # Pull as much information from the environment variables about the system to which to connect
@@ -259,11 +304,13 @@ if conn == False:
 	exit(-1)
 
 #Upload demo dashboards
-if LaunchScan(DEBUG,conn,scanname,scanid):
-	print("Scan launched")
-	exit(0)
+if ISRUN == False:
+	if LaunchScan(DEBUG,conn,scanname,scanid):
+		print("Scan launched")
+		exit(0)
+	else:
+		print("Scan not launched")
+		exit(-1)
 else:
-	print("Scan not launched")
-	exit(-1)
-
+	exit(CheckScanStatus(DEBUG,conn,scanname,scanid))
 
